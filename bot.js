@@ -16,6 +16,7 @@ const LANG = process.env.SIMSIMI_LANG || "id";
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
+  prompt: chalk.green("|[~] Saya : "),
 });
 
 /**
@@ -65,25 +66,30 @@ const showBanner = () => {
 };
 
 /**
- * askQuestion
- * Prompts the user for input and handles the chat loop
+ * handleInput
+ * Processes the user input
  */
-const askQuestion = () => {
-  rl.question(chalk.green("|[~] Saya : "), async (answer) => {
-    if (!answer.trim()) {
-      console.log(chalk.red("Please say something!"));
-      return askQuestion();
-    }
+const handleInput = async (answer) => {
+  // Pause input while processing to prevent interference
+  rl.pause();
 
-    if (answer.toLowerCase() === "exit") {
-      console.log(chalk.yellow("Bye bye! 👋"));
-      rl.close();
-      process.exit(0);
-    }
+  if (!answer.trim()) {
+    rl.resume();
+    rl.prompt();
+    return;
+  }
 
-    await getSimiResponse(answer);
-    askQuestion();
-  });
+  if (answer.toLowerCase() === "exit") {
+    console.log(chalk.yellow("Bye bye! 👋"));
+    rl.close();
+    process.exit(0);
+  }
+
+  await getSimiResponse(answer);
+
+  // Resume input after processing
+  rl.resume();
+  rl.prompt();
 };
 
 /**
@@ -134,7 +140,21 @@ const getSimiResponse = async (text) => {
 // Start the Application
 const start = () => {
   showBanner();
-  askQuestion();
+  rl.prompt();
+
+  rl.on("line", (line) => {
+    handleInput(line);
+  });
+
+  // Handle Ctrl+C gracefully
+  rl.on("SIGINT", () => {
+    rl.close();
+  });
+
+  rl.on("close", () => {
+    console.log(chalk.yellow("\nBye bye! 👋"));
+    process.exit(0);
+  });
 };
 
 start();
